@@ -222,3 +222,27 @@ CREATE TABLE MAINTENANCE (
     REFERENCES EQUIPMENT(equipment_id)
     ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+// 18-02-2024
+//modified the table employee by adding role column and password column
+ALTER TABLE EMPLOYEE 
+ADD COLUMN password VARCHAR(255) NOT NULL,
+ADD COLUMN role ENUM('admin','project_manager') NOT NULL;
+
+
+INSERT INTO EMPLOYEE 
+(first_name, last_name, email, phone, hire_date, job_title, salary, status, password, role)
+VALUES
+('Amol', 'Jadhav', 'amol@gmail.com', '9876543210', CURDATE(), 
+'Administrator', 50000.00, 'Active',
+'$2y$10$wH8sQ4t9x8lZ5b7R8g6Z6e6t8wH8sQ4t9x8lZ5b7R8g6Z6e6t8wH8',
+'admin');
+
+
+INSERT INTO EMPLOYEE 
+(first_name, last_name, email, phone, hire_date, job_title, salary, status, password, role)
+VALUES
+('Shubham', 'Patil', 'shubham@gmail.com', '9123456780', CURDATE(), 
+'Project Manager', 40000.00, 'Active',
+'$2y$10$wH8sQ4t9x8lZ5b7R8g6Z6e6t8wH8sQ4t9x8lZ5b7R8g6Z6e6t8wH8',
+'project_manager');

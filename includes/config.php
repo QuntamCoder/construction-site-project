@@ -21,7 +21,7 @@ try {
     );
     
     // Connection successful
-    echo "Connected to database successfully!";
+   
     
 } catch (PDOException $e) {
     // Handle connection error
