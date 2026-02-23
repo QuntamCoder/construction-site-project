@@ -3,7 +3,7 @@
 // Database Configuration
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
-define('DB_PASS', 'T#9758@qlph');
+define('DB_PASS', '');
 define('DB_NAME', 'construction_db');
 
 try {

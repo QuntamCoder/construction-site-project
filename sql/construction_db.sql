@@ -246,3 +246,45 @@ VALUES
 'Project Manager', 40000.00, 'Active',
 '$2y$10$wH8sQ4t9x8lZ5b7R8g6Z6e6t8wH8sQ4t9x8lZ5b7R8g6Z6e6t8wH8',
 'project_manager');
+
+
+23/2/2026
+
+CREATE TABLE PHASE (
+  phase_id INT AUTO_INCREMENT PRIMARY KEY,
+
+  site_id INT NOT NULL,   -- Phase belongs to a site
+
+  phase_name VARCHAR(150) NOT NULL,
+  description TEXT NULL,
+
+  start_date DATE NOT NULL,
+  end_date DATE NULL,
+
+  progress_percentage DECIMAL(5,2) DEFAULT 0.00,
+
+  status ENUM('Not Started','In Progress','On Hold','Completed','Delayed')
+         NOT NULL DEFAULT 'Not Started',
+
+  priority ENUM('Low','Medium','High') DEFAULT 'Medium',
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+             ON UPDATE CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_phase_site FOREIGN KEY (site_id)
+    REFERENCES SITE(site_id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+
+  INDEX idx_phase_site (site_id),
+  INDEX idx_phase_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+ALTER TABLE DAILY_REPORT
+ADD COLUMN phase_id INT NOT NULL AFTER site_id,
+ADD CONSTRAINT fk_report_phase
+FOREIGN KEY (phase_id)
+REFERENCES PHASE(phase_id)
+ON UPDATE CASCADE ON DELETE CASCADE;
