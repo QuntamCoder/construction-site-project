@@ -288,3 +288,206 @@ ADD CONSTRAINT fk_report_phase
 FOREIGN KEY (phase_id)
 REFERENCES PHASE(phase_id)
 ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+
+
+
+Date -  2/26/2026
+
+material and Inventory managment 
+
+
+
+
+USE construction_db;
+
+-- 1) Material Requirement Planning
+CREATE TABLE IF NOT EXISTS MATERIAL_PLAN (
+  plan_id INT AUTO_INCREMENT PRIMARY KEY,
+  plan_date DATE NOT NULL,
+  required_by_date DATE NULL,
+  status ENUM('Draft','Submitted','Approved','Rejected') NOT NULL DEFAULT 'Draft',
+  remarks VARCHAR(255) NULL,
+  site_id INT NOT NULL,
+  phase_id INT NULL,
+  created_by INT NULL,
+  approved_by INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_plan_site FOREIGN KEY (site_id)
+    REFERENCES SITE(site_id) ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_plan_phase FOREIGN KEY (phase_id)
+    REFERENCES PHASE(phase_id) ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_plan_created_by FOREIGN KEY (created_by)
+    REFERENCES EMPLOYEE(employee_id) ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_plan_approved_by FOREIGN KEY (approved_by)
+    REFERENCES EMPLOYEE(employee_id) ON UPDATE CASCADE ON DELETE SET NULL,
+
+  INDEX idx_plan_site (site_id),
+  INDEX idx_plan_phase (phase_id),
+  INDEX idx_plan_status (status),
+  INDEX idx_plan_date (plan_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS MATERIAL_PLAN_ITEM (
+  plan_item_id INT AUTO_INCREMENT PRIMARY KEY,
+  plan_id INT NOT NULL,
+  material_id INT NOT NULL,
+  planned_qty DECIMAL(10,2) NOT NULL,
+  estimated_unit_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  notes VARCHAR(255) NULL,
+
+  CONSTRAINT fk_plan_item_plan FOREIGN KEY (plan_id)
+    REFERENCES MATERIAL_PLAN(plan_id) ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_plan_item_material FOREIGN KEY (material_id)
+    REFERENCES MATERIAL(material_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+
+  UNIQUE KEY uq_plan_material (plan_id, material_id),
+  INDEX idx_plan_item_material (material_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 2) Material Indent Request
+CREATE TABLE IF NOT EXISTS MATERIAL_INDENT (
+  indent_id INT AUTO_INCREMENT PRIMARY KEY,
+  indent_number VARCHAR(50) NOT NULL UNIQUE,
+  indent_date DATE NOT NULL,
+  need_by_date DATE NULL,
+  status ENUM('Pending','Approved','Rejected','Fulfilled') NOT NULL DEFAULT 'Pending',
+  priority ENUM('Low','Medium','High') NOT NULL DEFAULT 'Medium',
+  reason VARCHAR(255) NULL,
+  site_id INT NOT NULL,
+  requested_by INT NULL,
+  approved_by INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_indent_site FOREIGN KEY (site_id)
+    REFERENCES SITE(site_id) ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_indent_requested_by FOREIGN KEY (requested_by)
+    REFERENCES EMPLOYEE(employee_id) ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_indent_approved_by FOREIGN KEY (approved_by)
+    REFERENCES EMPLOYEE(employee_id) ON UPDATE CASCADE ON DELETE SET NULL,
+
+  INDEX idx_indent_site (site_id),
+  INDEX idx_indent_status (status),
+  INDEX idx_indent_date (indent_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS MATERIAL_INDENT_ITEM (
+  indent_item_id INT AUTO_INCREMENT PRIMARY KEY,
+  indent_id INT NOT NULL,
+  material_id INT NOT NULL,
+  requested_qty DECIMAL(10,2) NOT NULL,
+  approved_qty DECIMAL(10,2) NULL,
+  remarks VARCHAR(255) NULL,
+
+  CONSTRAINT fk_indent_item_indent FOREIGN KEY (indent_id)
+    REFERENCES MATERIAL_INDENT(indent_id) ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_indent_item_material FOREIGN KEY (material_id)
+    REFERENCES MATERIAL(material_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+
+  UNIQUE KEY uq_indent_material (indent_id, material_id),
+  INDEX idx_indent_item_material (material_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 3) Purchase Approval Workflow
+CREATE TABLE IF NOT EXISTS PURCHASE_APPROVAL (
+  approval_id INT AUTO_INCREMENT PRIMARY KEY,
+  po_id INT NOT NULL,
+  indent_id INT NULL,
+  requested_by INT NULL,
+  approver_id INT NULL,
+  approval_status ENUM('Pending','Approved','Rejected') NOT NULL DEFAULT 'Pending',
+  approval_date DATE NULL,
+  remarks VARCHAR(255) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_approval_po FOREIGN KEY (po_id)
+    REFERENCES PURCHASE_ORDER(po_id) ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_approval_indent FOREIGN KEY (indent_id)
+    REFERENCES MATERIAL_INDENT(indent_id) ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_approval_requested_by FOREIGN KEY (requested_by)
+    REFERENCES EMPLOYEE(employee_id) ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_approval_approver FOREIGN KEY (approver_id)
+    REFERENCES EMPLOYEE(employee_id) ON UPDATE CASCADE ON DELETE SET NULL,
+
+  UNIQUE KEY uq_approval_po (po_id),
+  INDEX idx_approval_status (approval_status),
+  INDEX idx_approval_date (approval_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 4) GRN
+CREATE TABLE IF NOT EXISTS GRN (
+  grn_id INT AUTO_INCREMENT PRIMARY KEY,
+  grn_number VARCHAR(50) NOT NULL UNIQUE,
+  grn_date DATE NOT NULL,
+  po_id INT NOT NULL,
+  supplier_id INT NOT NULL,
+  site_id INT NOT NULL,
+  received_by INT NULL,
+  status ENUM('Draft','Posted','Cancelled') NOT NULL DEFAULT 'Draft',
+  remarks VARCHAR(255) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_grn_po FOREIGN KEY (po_id)
+    REFERENCES PURCHASE_ORDER(po_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_grn_supplier FOREIGN KEY (supplier_id)
+    REFERENCES SUPPLIER(supplier_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_grn_site FOREIGN KEY (site_id)
+    REFERENCES SITE(site_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_grn_received_by FOREIGN KEY (received_by)
+    REFERENCES EMPLOYEE(employee_id) ON UPDATE CASCADE ON DELETE SET NULL,
+
+  INDEX idx_grn_date (grn_date),
+  INDEX idx_grn_po (po_id),
+  INDEX idx_grn_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS GRN_ITEM (
+  grn_item_id INT AUTO_INCREMENT PRIMARY KEY,
+  grn_id INT NOT NULL,
+  material_id INT NOT NULL,
+  received_qty DECIMAL(10,2) NOT NULL,
+  accepted_qty DECIMAL(10,2) NOT NULL,
+  rejected_qty DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  unit_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+
+  CONSTRAINT fk_grn_item_grn FOREIGN KEY (grn_id)
+    REFERENCES GRN(grn_id) ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_grn_item_material FOREIGN KEY (material_id)
+    REFERENCES MATERIAL(material_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+
+  INDEX idx_grn_item_grn (grn_id),
+  INDEX idx_grn_item_material (material_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 5) Stock In / Stock Out
+CREATE TABLE IF NOT EXISTS STOCK_TRANSACTION (
+  stock_txn_id INT AUTO_INCREMENT PRIMARY KEY,
+  txn_date DATE NOT NULL,
+  txn_type ENUM('IN','OUT','ADJUSTMENT') NOT NULL,
+  reference_type ENUM('GRN','USAGE','MANUAL','RETURN','TRANSFER') NOT NULL DEFAULT 'MANUAL',
+  reference_id INT NULL,
+  site_id INT NOT NULL,
+  material_id INT NOT NULL,
+  quantity DECIMAL(10,2) NOT NULL,
+  unit_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  remarks VARCHAR(255) NULL,
+  created_by INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_stock_txn_site FOREIGN KEY (site_id)
+    REFERENCES SITE(site_id) ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_stock_txn_material FOREIGN KEY (material_id)
+    REFERENCES MATERIAL(material_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_stock_txn_created_by FOREIGN KEY (created_by)
+    REFERENCES EMPLOYEE(employee_id) ON UPDATE CASCADE ON DELETE SET NULL,
+
+  INDEX idx_stock_txn_date (txn_date),
+  INDEX idx_stock_txn_site_material (site_id, material_id),
+  INDEX idx_stock_txn_type (txn_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
